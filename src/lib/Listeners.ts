@@ -3,6 +3,7 @@ export interface UnsubscribeCallback {
     (): void;
 }
 
+
 export class Listeners<T> {
 
     listenerCount = 0;
@@ -11,8 +12,6 @@ export class Listeners<T> {
     createId() {
         return this.listenerCount++;
     }
-
-
 
     removeListener (id: number) {
         this.callbacks.delete(id);
@@ -29,6 +28,19 @@ export class Listeners<T> {
     getCallbacks(): Array<T> {
         return Array.from(this.callbacks.values());
     }
+
+    forEach(callbackfn: (value: T, key: number, map: Map<number, T>) => void) {
+        this.callbacks.forEach(callbackfn);
+    }
+
+
+}
+
+export interface ListenerCallback<T> {
+    (data: T): void
+}
+
+export class DataListeners<T> extends Listeners<ListenerCallback<T>> {
 
 }
 
