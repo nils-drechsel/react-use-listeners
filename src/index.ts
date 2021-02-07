@@ -1,6 +1,11 @@
 export { Listeners } from "./lib/Listeners";
 export { DataListeners } from "./lib/Listeners";
-export type { ListenerCallback } from "./lib/Listeners";
+export type { DataListenerCallback } from "./lib/Listeners";
 export type { UnsubscribeCallback } from "./lib/Listeners";
-export { MapObserver } from "./lib/MapObserver";
-export { StringMapObserver } from "./lib/MapObserver";
+export { ObservedPredicateMap } from "./lib/ObservedPredicateMap";
+export { ObservedPredicateStringMap } from "./lib/ObservedPredicateMap";
+export { ListenerEvent } from "./lib/Listeners";
+export { IdListeners } from "./lib/Listeners";
+export { ObservedMap } from "./lib/Listeners";
+export type { AnyIdListenerCallback } from "./lib/Listeners";
+export type { IdListenerCallback } from "./lib/Listeners";
