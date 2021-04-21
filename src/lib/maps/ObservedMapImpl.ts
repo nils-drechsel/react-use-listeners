@@ -1,6 +1,7 @@
-import { AnyIdListenerCallback, DataListenerCallback, DataListeners, IdListenerCallback, IdListeners } from "./Listeners";
+import { ObservedMap } from "../interfaces/ObservedMap";
+import { AnyIdListenerCallback, DataListenerCallback, DataListeners, IdListenerCallback, IdListeners } from "../Listeners";
 
-export class ObservedMap<T> extends Map<string, T> {
+export class ObservedMapImpl<T> extends Map<string, T> implements ObservedMap<T> {
 
     arrayListeners: DataListeners<Array<T>> = new DataListeners();
     idListeners: IdListeners = new IdListeners();
@@ -9,6 +10,13 @@ export class ObservedMap<T> extends Map<string, T> {
     constructor(throwErrors: boolean = false) {
         super();
         this.throwErrors = throwErrors;
+    }
+    awaitForEach(callback: (value: T, key: string) => Promise<void>): void {
+        Promise.all(
+            Array.from(this).map(async ([key, value]) => {
+                await callback(value, key);
+            })
+        );
     }
 
     addArrayListener(listener: DataListenerCallback<Array<T>>) {
@@ -86,6 +94,7 @@ export class ObservedMap<T> extends Map<string, T> {
 
         this.notifyArrayListeners();
     }
+
 
     
     

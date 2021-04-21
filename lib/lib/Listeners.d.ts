@@ -30,41 +30,28 @@ interface IdContainer {
 export interface AnyIdListenerCallback {
     (id: string, event: ListenerEvent): void;
 }
+export interface AnyListenerCallback {
+    (event: ListenerEvent, ...ids: string[]): void;
+}
+export interface AnySubIdListenerCallback {
+    (id: string, subId: string, event: ListenerEvent): void;
+}
 export interface IdListenerCallback {
     (event: ListenerEvent): void;
 }
 export declare class IdListeners {
     root: Map<string, IdContainer>;
+    anyListeners: Listeners<(event: ListenerEvent, ...ids: string[]) => void>;
     constructor();
     getOrCreateRoot(rootId: string): IdContainer;
     getOrCreateIdListeners(container: IdContainer, id: string): Listeners<(event: ListenerEvent) => void>;
     makePath(...rootIds: string[]): string;
+    addAnyListener(listener: AnyListenerCallback): UnsubscribeCallback;
     addListener(listener: AnyIdListenerCallback, ...rootIds: string[]): () => void;
     addIdListener(id: string, listener: IdListenerCallback, ...rootIds: string[]): () => void;
     removeRootIfPossible(container: IdContainer): void;
     addId(id: string, ...rootIds: string[]): void;
     removeId(id: string, ...rootIds: string[]): void;
     modifyId(id: string, ...rootIds: string[]): void;
-}
-export declare class ObservedMap<T> extends Map<string, T> {
-    arrayListeners: DataListeners<Array<T>>;
-    idListeners: IdListeners;
-    addArrayListener(listener: DataListenerCallback<Array<T>>): UnsubscribeCallback;
-    addAnyIdListener(listener: AnyIdListenerCallback): () => void;
-    addIdListener(id: string, listener: IdListenerCallback): () => void;
-    private notifyArrayListeners;
-    private getArray;
-    set(id: string, data: T): this;
-    delete(id: string): boolean;
-    modify(id: string, data?: Object): void;
-    clear(): void;
-}
-export declare class ObservedObject<T> {
-    listeners: DataListeners<T | undefined>;
-    obj: T | null;
-    constructor();
-    get(): Promise<T>;
-    set(obj: T): void;
-    fail(): void;
 }
 export {};

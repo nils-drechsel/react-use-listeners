@@ -65,6 +65,14 @@ export interface AnyIdListenerCallback {
     (id:string, event: ListenerEvent): void
 }
 
+export interface AnyListenerCallback {
+    (event: ListenerEvent, ...ids: string[]): void
+}
+
+export interface AnySubIdListenerCallback {
+    (id: string, subId: string, event: ListenerEvent): void
+}
+
 export interface IdListenerCallback {
     (event: ListenerEvent): void
 }
@@ -73,6 +81,8 @@ export interface IdListenerCallback {
 export class IdListeners {
 
     root: Map<string, IdContainer> = new Map();
+    anyListeners: Listeners<(event: ListenerEvent, ...ids: string[]) => void> = new Listeners();
+
 
     constructor() {
     }
@@ -94,6 +104,10 @@ export class IdListeners {
     makePath(...rootIds: string[]): string {
         if (rootIds.length === 0) return "/";
         else return rootIds.join("/");
+    }
+
+    addAnyListener(listener: AnyListenerCallback) {
+        return this.anyListeners.addListener(listener);
     }
 
     addListener(listener: AnyIdListenerCallback, ...rootIds: string[]) {
@@ -148,13 +162,14 @@ export class IdListeners {
 
         if (container.ids.has(id)) {
             container.listeners.forEach(listener => listener(id, ListenerEvent.MODIFIED));
+            this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.MODIFIED, ...rootIds, id));
         } else {
             container.ids.add(id);
             container.listeners.forEach(listener => listener(id, ListenerEvent.ADDED));
             if (container.idListeners.has(id)) {
                 container.idListeners.get(id)!.forEach(listener => listener(ListenerEvent.ADDED));
             }
-
+            this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.ADDED, ...rootIds, id));
         }
         
     }
@@ -172,6 +187,7 @@ export class IdListeners {
         if (container.idListeners.has(id)) {
                 container.idListeners.get(id)!.forEach(listener => listener(ListenerEvent.REMOVED));
         }
+        this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.REMOVED, ...rootIds, id));
 
         this.removeRootIfPossible(container);      
         
@@ -188,131 +204,7 @@ export class IdListeners {
         if (container.idListeners.has(id)) {
                 container.idListeners.get(id)!.forEach(listener => listener(ListenerEvent.MODIFIED));
         }
+        this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.MODIFIED, ...rootIds, id));
     }
-
-}
-
-
-export class ObservedMap<T> extends Map<string, T> {
-
-    arrayListeners: DataListeners<Array<T>> = new DataListeners();
-    idListeners: IdListeners = new IdListeners();
-
-    addArrayListener(listener: DataListenerCallback<Array<T>>) {
-        const unsubscribe = this.arrayListeners.addListener(listener);
-        const array = this.getArray();
-        listener(array);
-        return unsubscribe;
-    }
-
-    addAnyIdListener(listener: AnyIdListenerCallback) {
-        return this.idListeners.addListener(listener);
-    }
-
-    addIdListener(id: string, listener: IdListenerCallback) {
-        return this.idListeners.addIdListener(id, listener);
-    }
-
-
-    private notifyArrayListeners() {
-        const array = this.getArray();
-        this.arrayListeners.forEach(listener => listener(array));
-    }
-
-    private getArray(): Array<T> {
-        return Array.from(this.values());
-    }
-
-    set(id: string, data: T) {
-        const idExisted = this.has(id);
-        super.set(id, data);
-
-        if (idExisted) {
-            this.idListeners.modifyId(id);
-        } else {
-            this.idListeners.addId(id);
-        }
-
-        this.notifyArrayListeners();
-
-        return this;
-
-    }
-
-    delete(id: string) {
-        if (!this.has(id)) false;
-        super.delete(id);
-        this.idListeners.removeId(id);
-
-        this.notifyArrayListeners();
-        return true;
-    }
-
-    modify(id: string, data?: Object) {
-        if (!this.has(id)) return;
-
-        if (data) {
-            super.set(id, Object.assign({}, this.get(id), data));
-        }
-
-        this.idListeners.modifyId(id);
-
-        this.notifyArrayListeners();
-    }
-
-    clear() {
-        const keys = Array.from(this.keys());
-        super.clear();
-        keys.forEach(id => this.idListeners.removeId(id));
-
-        this.notifyArrayListeners();
-    }
-
-    
-    
-}
-
-
-
-export class ObservedObject<T> {
-
-    listeners: DataListeners<T | undefined> = new DataListeners;
-
-    obj: T | null = null;
-
-    constructor() {
-
-    }
-
-    async get(): Promise<T> {
-        if (this.obj !== null && this.obj !== undefined) return this.obj;
-
-        return new Promise((resolve, reject) => {
-
-            const unsubscribe = this.listeners.addListener((obj: T | undefined) => {
-                unsubscribe();
-                if (obj === undefined) {
-                    reject();
-                } else {
-                    resolve(obj);
-                }
-
-            })
-
-        });
-    }
-
-    set(obj: T) {
-        this.obj = obj;
-        this.listeners.forEach(listener => listener(this.obj!));
-
-    }
-
-    fail() {
-        this.listeners.forEach(listener => listener(undefined));
-    }
-
-
-
 
 }

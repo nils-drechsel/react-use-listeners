@@ -15,9 +15,12 @@ export declare class ObservedMapMap<CONTENT, SUB_CONTENT> {
     has(id: string): boolean;
     hasSub(id: string, subId: string): boolean;
     get(id: string): CONTENT | undefined;
+    getMap(id: string): Map<string, SUB_CONTENT> | undefined;
     getSub(id: string, subId: string): SUB_CONTENT | undefined;
     forEach(callback: (value: CONTENT, key: string) => void): void;
+    awaitForEach(callback: (value: CONTENT, key: string) => Promise<void>): void;
     forEachSub(id: string, callback: (value: SUB_CONTENT, key: string) => void): void;
+    awaitForEachSub(id: string, callback: (value: SUB_CONTENT, key: string) => Promise<void>): void;
     keys(): IterableIterator<string>;
     keysSub(id: string): IterableIterator<string> | never[];
     values(): CONTENT[];

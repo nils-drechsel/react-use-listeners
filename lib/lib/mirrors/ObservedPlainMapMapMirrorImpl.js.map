@@ -1,0 +1,1 @@
+{"version":3,"file":"ObservedPlainMapMapMirrorImpl.js","sourceRoot":"","sources":["../../../src/lib/mirrors/ObservedPlainMapMapMirrorImpl.ts"],"names":[],"mappings":";;;AAEA,yEAAsE;AAEtE,MAAa,6BAAiC,SAAQ,mDAAyC;IAE3F,IAAI,CAAC,EAAU;QACX,IAAI,IAAI,CAAC,GAAG,CAAC,EAAE,CAAC;YAAE,OAAO;QACzB,IAAI,CAAC,GAAG,CAAC,EAAE,EAAE,EAAE,CAAC,CAAC;IACrB,CAAC;CAEJ;AAPD,sEAOC"}
