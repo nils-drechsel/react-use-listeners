@@ -1,18 +1,21 @@
 import { ObservedMap } from "../interfaces/ObservedMap";
-import { AnyIdListenerCallback, DataListenerCallback, DataListeners, IdListenerCallback, IdListeners } from "../Listeners";
-export declare class ObservedMapImpl<T> extends Map<string, T> implements ObservedMap<T> {
-    arrayListeners: DataListeners<Array<T>>;
+import { AnyIdListeners, IdListenerCallback, IdListeners } from "../Listeners";
+export declare class ObservedMapImpl<T> implements ObservedMap<T> {
     idListeners: IdListeners;
-    throwErrors: boolean;
-    constructor(throwErrors?: boolean);
+    anyIdListeners: AnyIdListeners;
+    private map;
+    constructor();
+    get(id: string): T | undefined;
+    has(id: string): boolean;
+    keys(): IterableIterator<string>;
+    values(): IterableIterator<T>;
+    size(): number;
+    forEach(callback: (value: T, key: string) => void): void;
     awaitForEach(callback: (value: T, key: string) => Promise<void>): void;
-    addArrayListener(listener: DataListenerCallback<Array<T>>): import("../Listeners").UnsubscribeCallback;
-    addAnyIdListener(listener: AnyIdListenerCallback): () => void;
-    addIdListener(id: string, listener: IdListenerCallback): () => void;
-    private notifyArrayListeners;
-    private getArray;
+    addAnyIdListener(listener: IdListenerCallback): import("../Listeners").UnsubscribeCallback;
+    addIdListener(id: string, listener: IdListenerCallback): import("../Listeners").UnsubscribeCallback;
+    private notify;
     set(id: string, data: T): this;
-    delete(id: string): boolean;
+    delete(id: string): void;
     modify(id: string, data?: Object): void;
-    clear(): void;
 }

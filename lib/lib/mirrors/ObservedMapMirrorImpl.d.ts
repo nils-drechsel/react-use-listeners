@@ -1,26 +1,22 @@
 import { ObservedMap } from "../interfaces/ObservedMap";
-import { AnyIdListenerCallback, IdListenerCallback, UnsubscribeCallback } from "../Listeners";
-export declare class ObservedMapMirrorImpl<CONTENT> implements ObservedMap<CONTENT> {
+import { IdListenerCallback, UnsubscribeCallback } from "../Listeners";
+export declare class ObservedMapMirrorImpl<T> implements ObservedMap<T> {
     private map;
-    private observedIds;
-    size: number;
-    private unsubscribe;
-    constructor(map: ObservedMap<CONTENT>);
-    [Symbol.iterator](): IterableIterator<[string, CONTENT]>;
-    entries(): IterableIterator<[string, CONTENT]>;
-    [Symbol.toStringTag]: string;
-    addAnyIdListener(listener: AnyIdListenerCallback): UnsubscribeCallback;
+    observedIds: Set<string>;
+    constructor(map: ObservedMap<T>);
+    size(): number;
+    addAnyIdListener(listener: IdListenerCallback): UnsubscribeCallback;
     addIdListener(id: string, listener: IdListenerCallback): UnsubscribeCallback;
-    get(id: string): CONTENT | undefined;
-    set(id: string, data: CONTENT): this;
+    get(id: string): T | undefined;
+    set(id: string, data: T): this;
     has(id: string): boolean;
-    delete(id: string): boolean;
+    delete(id: string): void;
     modify(id: string, data?: Object): void;
     clear(): void;
     keys(): IterableIterator<string>;
-    values(): IterableIterator<CONTENT>;
-    forEach(callback: (value: CONTENT, key: string, map: Map<string, CONTENT>) => void): void;
-    awaitForEach(callback: (value: CONTENT, key: string) => Promise<void>): void;
+    values(): IterableIterator<T>;
+    forEach(callback: (value: T, key: string, map: Map<string, T>) => void): void;
+    awaitForEach(callback: (value: T, key: string) => Promise<void>): void;
     addObservedId(id: string): void;
     deleteObservedId(id: string): void;
     destroy(): void;

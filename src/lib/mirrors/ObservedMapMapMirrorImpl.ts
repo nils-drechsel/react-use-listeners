@@ -1,22 +1,17 @@
 import { ObservedMap } from "../interfaces/ObservedMap";
 import { ObservedMapMap } from "../interfaces/ObservedMapMap";
-import { AnyIdListenerCallback, AnySubIdListenerCallback, IdListenerCallback, ListenerEvent, UnsubscribeCallback } from "../Listeners";
+import { ObservedMapMapMirror } from "../interfaces/ObservedMapMapMirror";
+import { ListenerEvent, SubIdListenerCallback, UnsubscribeCallback } from "../Listeners";
 import { ObservedMapImpl } from "../maps/ObservedMapImpl";
 
-
-
-
-export class ObservedMapMapMirrorImpl<CONTENT, SUB_CONTENT> implements ObservedMapMap<CONTENT, SUB_CONTENT> {
-
-    private map: ObservedMapMap<CONTENT, SUB_CONTENT>;
+export class ObservedMapMapMirrorImpl<CONTENT> implements ObservedMapMapMirror<CONTENT> {
+    private map: ObservedMapMap<CONTENT>;
     private observedIds: Map<string, Set<string>> = new Map();
 
-    public size: number = 0;
-
-    constructor(map: ObservedMapMap<CONTENT, SUB_CONTENT>) {
+    constructor(map: ObservedMapMap<CONTENT>) {
         this.map = map;
     }
-    
+
     [Symbol.iterator](): IterableIterator<[string, CONTENT]> {
         throw new Error("Method not implemented.");
     }
@@ -25,143 +20,100 @@ export class ObservedMapMapMirrorImpl<CONTENT, SUB_CONTENT> implements ObservedM
     }
     [Symbol.toStringTag]: string;
 
-    addAnyListener(listener: AnySubIdListenerCallback): UnsubscribeCallback {
-        return this.map.addAnyListener((id: string, subId: string, event: ListenerEvent) => {
-            if (this.observedIds.has(id) && this.observedIds.get(id)?.has(subId)) listener(id, subId, event);
-        });
-    }    
-
-    addAnySubIdListener(id: string, listener: AnyIdListenerCallback): UnsubscribeCallback {
-        return this.map.addAnySubIdListener(id, (subId: string, event: ListenerEvent) => {
-            if (this.observedIds.has(id)) listener(subId, event);
-        });
-    }
-    addSubIdListener(id: string, subId: string, listener: IdListenerCallback): UnsubscribeCallback {
-        return this.map.addSubIdListener(id, subId, (event: ListenerEvent) => {
-            if (this.observedIds.has(id)) listener(event);
+    addSubIdListener(id: string, subId: string, listener: SubIdListenerCallback): UnsubscribeCallback {
+        return this.map.addSubIdListener(id, subId, (id, subId, event) => {
+            if (this.observedIds.has(id)) listener(id, subId, event);
         });
     }
 
+    addAnySubIdListener(id: string, listener: SubIdListenerCallback): UnsubscribeCallback {
+        return this.map.addAnySubIdListener(id, (id: string, subId: string, event: ListenerEvent) => {
+            if (this.observedIds.has(id) && this.observedIds.get(id)!.has(subId)) listener(id, subId, event);
+        });
+    }
 
-    private getSubValues(id: string): ObservedMap<SUB_CONTENT> {
-        const res: ObservedMap<SUB_CONTENT> = new ObservedMapImpl();
+    addAnyListener(listener: SubIdListenerCallback): UnsubscribeCallback {
+        return this.map.addAnyListener((id, subId, event) => {
+            if (this.observedIds.has(id) && this.observedIds.get(id)!.has(subId)) listener(id, subId, event);
+        });
+    }
+
+    private getSubValues(id: string): ObservedMap<CONTENT> {
+        const res: ObservedMap<CONTENT> = new ObservedMapImpl();
         if (!this.observedIds.has(id)) return res;
         for (const key of this.observedIds.get(id)!) {
             const content = this.map.getSub(id, key);
             if (content !== undefined) res.set(key, content);
         }
         return res;
-
     }
-
 
     hasSub(id: string, subId: string): boolean {
         return this.observedIds.has(id) && !!this.observedIds.get(id)?.has(subId) && this.map.hasSub(id, subId);
     }
-    getMap(id: string): Map<string, SUB_CONTENT> | undefined {
-        return this.getSubValues(id);
-    }
-    getSub(id: string, subId: string): SUB_CONTENT | undefined {
+
+    getSub(id: string, subId: string): CONTENT | undefined {
         if (!this.observedIds.has(id) || !this.observedIds.get(id)?.has(subId)) return undefined;
         return this.map.getSub(id, subId);
     }
-    forEachSub(id: string, callback: (value: SUB_CONTENT, key: string) => void): void {
+    forEachSub(id: string, callback: (value: CONTENT, key: string) => void): void {
         const values = this.getSubValues(id);
         values.forEach(callback);
     }
-    awaitForEachSub(id: string, callback: (value: SUB_CONTENT, key: string) => Promise<void>): void {
+    awaitForEachSub(id: string, callback: (value: CONTENT, key: string) => Promise<void>): void {
         const values = this.getSubValues(id);
         values.awaitForEach(callback);
+    }
+    keys(): IterableIterator<string> {
+        const keys: Array<string> = [];
+        this.observedIds.forEach((_value, key) => {
+            if (this.map.has(key)) keys.push(key);
+        });
+        return keys.values();
     }
     keysSub(id: string): IterableIterator<string> {
         const values = this.getSubValues(id);
         return values.keys();
     }
-    valuesSub(id: string): IterableIterator<SUB_CONTENT> {
+    valuesSub(id: string): IterableIterator<CONTENT> {
         const values = this.getSubValues(id);
         return values.values();
     }
     sizeSub(id: string): number {
         const values = this.getSubValues(id);
-        return values.size;
+        return values.size();
     }
-    setSub(id: string, subId: string, data: SUB_CONTENT): void {
+    setSub(id: string, subId: string, data: CONTENT): void {
         this.map.setSub(id, subId, data);
-        this.addObservedId(id, subId);
     }
     deleteSub(id: string, subId: string): void {
         if (!this.observedIds.has(id)) return;
         this.map.deleteSub(id, subId);
-        this.deleteObservedId(id, subId);
     }
     modifySub(id: string, subId: string, data?: Object): void {
         if (!this.observedIds.has(id)) return;
         this.map.modifySub(id, subId, data);
     }
-    clearSub(id: string): void {
-        if (!this.observedIds.has(id)) return;
-        this.map.clearSub(id);
-        this.observedIds.get(id)?.clear();
-    }
-    addAnyIdListener(listener: AnyIdListenerCallback): UnsubscribeCallback {
-        return this.map.addAnyIdListener((id: string, event: ListenerEvent) => {
-            if (this.observedIds.has(id)) listener(id, event);
-        });
-    }
-    addIdListener(id: string, listener: IdListenerCallback): UnsubscribeCallback {
-        return this.map.addIdListener(id, (event: ListenerEvent) => {
-            if (this.observedIds.has(id)) listener(event);
-        });
-    }
-    get(id: string): CONTENT | undefined {
-        if (!this.map.has(id)) return undefined;
-        return this.map.get(id);
-    }
-    set(id: string, data: CONTENT): this {
-        this.map.set(id, data);
-        this.addObservedId(id);
-        return this;
-    }
     has(id: string): boolean {
-        return this.observedIds.has(id) && this.map.has(id);
+        if (!this.observedIds.has(id) || !this.map.has(id)) return false;
+
+        const subIds = this.map.getSubIds(id);
+        const obsIds = this.observedIds.get(id)!;
+
+        return Array.from(obsIds).some((observedId) => subIds.has(observedId));
     }
-    delete(id: string): boolean {
-        if (!this.observedIds.has(id)) return false;
-        const res = this.map.delete(id);
-        this.observedIds.delete(id);
-        return res;
+
+    getSubIds(id: string): Set<string> {
+        if (!this.map.has(id) || !this.observedIds.has(id)) return new Set();
+
+        const subIds = this.map.getSubIds(id)!;
+        const obsIds = this.observedIds.get(id)!;
+        return new Set([...subIds].filter((x) => obsIds.has(x)));
     }
-    modify(id: string, data?: Object): void {
+
+    delete(id: string): void {
         if (!this.observedIds.has(id)) return;
-        this.map.modify(id, data);
-    }
-    clear(): void {
-        this.observedIds.clear();
-    }
-    keys(): IterableIterator<string> {
-        return this.observedIds.keys();
-    }
-    values(): IterableIterator<CONTENT> {
-        const res = [];
-        for (const key of this.observedIds.keys()) {
-            const v = this.map.get(key);
-            if (v !== undefined) res.push(v);
-        }
-        return res.values();
-    }
-    forEach(callback: (value: CONTENT, key: string, map: Map<string, CONTENT>) => void): void {
-        Array.from(this.observedIds.keys()).forEach(id => {
-            const v = this.map.get(id);
-            if (v === undefined) return;
-            callback(v, id, new Map());
-        })
-    }
-    awaitForEach(callback: (value: CONTENT, key: string) => Promise<void>): void {
-        Promise.all(Array.from(this.observedIds.keys()).map(async id => {
-            const v = this.map.get(id);
-            if (v === undefined) return;
-            callback(v, id);
-        }));
+        this.map.delete(id);
     }
 
     addObservedId(id: string, subId?: string): void {
@@ -173,9 +125,19 @@ export class ObservedMapMapMirrorImpl<CONTENT, SUB_CONTENT> implements ObservedM
     deleteObservedId(id: string, subId?: string): void {
         if (!this.observedIds.has(id)) return;
         if (!subId) this.observedIds.delete(id);
-        else this.observedIds.get(id)?.delete(subId);
-
+        else {
+            const sub = this.observedIds.get(id)!;
+            sub.delete(subId);
+            if (sub.size === 0) this.deleteObservedId(id);
+        }
     }
 
+    getObservedIds(): Array<string> {
+        return Array.from(this.observedIds.keys());
+    }
 
+    getObservedSubIds(id: string): Array<string> {
+        if (!this.observedIds.has(id)) return [];
+        return Array.from(this.observedIds.get(id)!.values());
+    }
 }

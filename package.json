@@ -1,25 +1,31 @@
 {
-  "name": "react-use-listeners",
-  "version": "2.0.12",
-  "description": "",
-  "main": "lib/index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/nils-drechsel/react-use-listeners.git"
-  },
-  "author": "Nils J. D. Drechsel",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/nils-drechsel/react-use-listeners/issues"
-  },
-  "homepage": "https://github.com/nils-drechsel/react-use-listeners#readme",
-  "devDependencies": {
-    "@types/react": "17.0.3",
-    "typescript": "4.2.3"
-  },
-  "dependencies": {}
+    "name": "react-use-listeners",
+    "version": "3.0.3",
+    "description": "",
+    "main": "lib/index.js",
+    "scripts": {
+        "test": "mocha -r ts-node/register src/**/*.spec.ts",
+        "build": "tsc"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/nils-drechsel/react-use-listeners.git"
+    },
+    "author": "Nils J. D. Drechsel",
+    "license": "MIT",
+    "bugs": {
+        "url": "https://github.com/nils-drechsel/react-use-listeners/issues"
+    },
+    "homepage": "https://github.com/nils-drechsel/react-use-listeners#readme",
+    "devDependencies": {
+        "@types/react": "17.0.3",
+        "typescript": "4.2.3",
+        "@types/chai": "^4.2.17",
+        "@types/mocha": "^8.2.2"
+    },
+    "dependencies": {
+        "chai": "^4.3.4",
+        "mocha": "^8.3.2",
+        "ts-node": "^9.1.1"
+    }
 }

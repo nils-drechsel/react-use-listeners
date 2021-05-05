@@ -1,101 +1,91 @@
 import { ObservedMap } from "../interfaces/ObservedMap";
-import { AnyIdListenerCallback, DataListenerCallback, DataListeners, IdListenerCallback, IdListeners } from "../Listeners";
+import { AnyIdListeners, IdListenerCallback, IdListeners, ListenerEvent } from "../Listeners";
 
-export class ObservedMapImpl<T> extends Map<string, T> implements ObservedMap<T> {
-
-    arrayListeners: DataListeners<Array<T>> = new DataListeners();
+export class ObservedMapImpl<T> implements ObservedMap<T> {
     idListeners: IdListeners = new IdListeners();
-    throwErrors: boolean;
+    anyIdListeners: AnyIdListeners = new AnyIdListeners();
 
-    constructor(throwErrors: boolean = false) {
-        super();
-        this.throwErrors = throwErrors;
+    private map: Map<string, T> = new Map();
+
+    constructor() {}
+
+    get(id: string): T | undefined {
+        return this.map.get(id);
     }
+
+    has(id: string): boolean {
+        return this.map.has(id);
+    }
+
+    keys(): IterableIterator<string> {
+        return this.map.keys();
+    }
+
+    values(): IterableIterator<T> {
+        return this.map.values();
+    }
+
+    size(): number {
+        return this.map.size;
+    }
+
+    forEach(callback: (value: T, key: string) => void): void {
+        return this.map.forEach(callback);
+    }
+
     awaitForEach(callback: (value: T, key: string) => Promise<void>): void {
         Promise.all(
-            Array.from(this).map(async ([key, value]) => {
+            Array.from(this.map).map(async ([key, value]) => {
                 await callback(value, key);
             })
         );
     }
 
-    addArrayListener(listener: DataListenerCallback<Array<T>>) {
-        const unsubscribe = this.arrayListeners.addListener(listener);
-        const array = this.getArray();
-        listener(array);
+    addAnyIdListener(listener: IdListenerCallback) {
+        const unsubscribe = this.anyIdListeners.addListener(listener);
+        this.map.forEach((_value, id) => listener(id, ListenerEvent.ADDED));
         return unsubscribe;
     }
 
-    addAnyIdListener(listener: AnyIdListenerCallback) {
-        return this.idListeners.addListener(listener);
-    }
-
     addIdListener(id: string, listener: IdListenerCallback) {
-        return this.idListeners.addIdListener(id, listener);
+        const unsubscribe = this.idListeners.addListener(id, listener);
+        if (this.map.has(id)) listener(id, ListenerEvent.ADDED);
+        return unsubscribe;
     }
 
-
-    private notifyArrayListeners() {
-        const array = this.getArray();
-        this.arrayListeners.forEach(listener => listener(array));
-    }
-
-    private getArray(): Array<T> {
-        return Array.from(this.values());
+    private notify(id: string, event: ListenerEvent) {
+        this.idListeners.notify(id, event);
+        this.anyIdListeners.notify(id, event);
     }
 
     set(id: string, data: T) {
-        const idExisted = this.has(id);
-        super.set(id, data);
+        const idExisted = this.map.has(id);
+        this.map.set(id, data);
 
         if (idExisted) {
-            this.idListeners.modifyId(id);
+            this.notify(id, ListenerEvent.MODIFIED);
         } else {
-            this.idListeners.addId(id);
+            this.notify(id, ListenerEvent.ADDED);
         }
 
-        this.notifyArrayListeners();
-
         return this;
-
     }
 
-    delete(id: string) {
-        if (!this.has(id)) return false;
-        super.delete(id);
-        this.idListeners.removeId(id);
-
-        this.notifyArrayListeners();
-        return true;
+    delete(id: string): void {
+        if (!this.map.has(id)) return;
+        this.map.delete(id);
+        this.notify(id, ListenerEvent.REMOVED);
     }
 
     modify(id: string, data?: Object) {
-        if (!this.has(id)) {
-            if (this.throwErrors) {
-                throw new Error("ObservedMap has no id: " + id + " while modifying");
-            } else {
-                return;
-            }
+        if (!this.map.has(id)) {
+            return;
         }
 
         if (data) {
-            super.set(id, Object.assign({}, this.get(id), data));
+            this.map.set(id, Object.assign({}, this.map.get(id), data));
         }
 
-        this.idListeners.modifyId(id);
-
-        this.notifyArrayListeners();
+        this.notify(id, ListenerEvent.MODIFIED);
     }
-
-    clear() {
-        const keys = Array.from(this.keys());
-        super.clear();
-        keys.forEach(id => this.idListeners.removeId(id));
-
-        this.notifyArrayListeners();
-    }
-
-
-    
-    
 }

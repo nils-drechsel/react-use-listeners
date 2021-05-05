@@ -1,4 +1,3 @@
-
 export interface UnsubscribeCallback {
     (): void;
 }
@@ -9,202 +8,235 @@ export enum ListenerEvent {
     MODIFIED,
 }
 
-
-export class Listeners<T> {
-
-    listenerCount = 0;
-    callbacks: Map<number, T> = new Map();
-
-    createId() {
-        return this.listenerCount++;
-    }
-
-    removeListener (id: number) {
-        this.callbacks.delete(id);
-    }
-
-    addListener(callback: T): UnsubscribeCallback {
-        const id = this.createId();
-        this.callbacks.set(id, callback);
-
-        const returnRemoveCallback = () => this.removeListener(id);
-        return returnRemoveCallback.bind(this);
-    }
-
-    getCallbacks(): Array<T> {
-        return Array.from(this.callbacks.values());
-    }
-
-    forEach(callbackfn: (value: T, key: number, map: Map<number, T>) => void) {
-        this.callbacks.forEach(callbackfn);
-    }
-
-    size(): number {
-        return this.callbacks.size;
-    }
-
-
-}
-
-export interface DataListenerCallback<T> {
-    (data: T): void
-}
-
-export class DataListeners<T> extends Listeners<DataListenerCallback<T>> {
-
-}
-
-interface IdContainer {
-    rootId: string;
-    ids: Set<string>;
-    listeners: Listeners<(id: string, event: ListenerEvent) => void>;
-    idListeners: Map<string, Listeners<(event: ListenerEvent) => void>>;
-}
-
-export interface AnyIdListenerCallback {
-    (id:string, event: ListenerEvent): void
-}
-
-export interface AnyListenerCallback {
-    (event: ListenerEvent, ...ids: string[]): void
-}
-
-export interface AnySubIdListenerCallback {
-    (id: string, subId: string, event: ListenerEvent): void
-}
-
 export interface IdListenerCallback {
-    (event: ListenerEvent): void
+    (id: string, event: ListenerEvent): void;
 }
 
+export interface SubIdListenerCallback {
+    (id: string, subId: string, event: ListenerEvent): void;
+}
+
+export class Unsubscribers<T> {
+    items: Map<number, T> = new Map();
+    cnt = 0;
+
+    add(item: T): UnsubscribeCallback {
+        const id = this.cnt++;
+        this.items.set(id, item);
+        return () => {
+            this.items.delete(id);
+        };
+    }
+
+    forEach(callback: (item: T) => void): void {
+        this.items.forEach((item) => callback(item));
+    }
+
+    isEmpty(): boolean {
+        return this.items.size === 0;
+    }
+}
+
+export class AnyIdListeners {
+    listeners: Unsubscribers<IdListenerCallback> = new Unsubscribers();
+    cnt = 0;
+
+    addListener(listener: IdListenerCallback): UnsubscribeCallback {
+        return this.listeners.add(listener);
+    }
+
+    notify(id: string, event: ListenerEvent) {
+        this.listeners.forEach((listener) => listener(id, event));
+    }
+
+    add(id: string): void {
+        this.notify(id, ListenerEvent.ADDED);
+    }
+
+    modify(id: string): void {
+        this.notify(id, ListenerEvent.MODIFIED);
+    }
+
+    delete(id: string): void {
+        this.notify(id, ListenerEvent.REMOVED);
+    }
+
+    isEmpty(): boolean {
+        return this.listeners.isEmpty();
+    }
+}
 
 export class IdListeners {
+    listeners: Map<string, Unsubscribers<IdListenerCallback>> = new Map();
 
-    root: Map<string, IdContainer> = new Map();
-    anyListeners: Listeners<(event: ListenerEvent, ...ids: string[]) => void> = new Listeners();
-
-
-    constructor() {
-    }
-
-    getOrCreateRoot(rootId: string) {
-        if (!this.root.has(rootId)) {
-            this.root.set(rootId, {rootId, ids: new Set(), listeners: new Listeners(), idListeners: new Map()});
+    addListener(id: string, listener: IdListenerCallback): UnsubscribeCallback {
+        if (!this.listeners.has(id)) {
+            this.listeners.set(id, new Unsubscribers());
         }
-        return this.root.get(rootId)!;
-    }
-
-    getOrCreateIdListeners(container: IdContainer, id: string) {
-        if (!container.idListeners.has(id)) {
-            container.idListeners.set(id, new Listeners());
-        }
-        return container.idListeners.get(id)!;
-    }
-
-    makePath(...rootIds: string[]): string {
-        if (rootIds.length === 0) return "/";
-        else return rootIds.join("/");
-    }
-
-    addAnyListener(listener: AnyListenerCallback) {
-        return this.anyListeners.addListener(listener);
-    }
-
-    addListener(listener: AnyIdListenerCallback, ...rootIds: string[]) {
-
-        const rootId = this.makePath(...rootIds);
-        const container = this.getOrCreateRoot(rootId);
-
-        const unsubscribe = container.listeners.addListener(listener);
-
-        container.ids.forEach(ids => {
-            listener(ids, ListenerEvent.ADDED);
-        })
+        const listeners = this.listeners.get(id)!;
+        const unsubscribe = listeners.add(listener);
 
         return () => {
             unsubscribe();
-            if (container.listeners.size() === 0 && container.ids.size === 0) {
-                this.root.delete(rootId);
-            }
-        }
+            if (this.listeners.get(id)!.isEmpty()) this.listeners.delete(id);
+        };
     }
 
-    addIdListener(id: string, listener: IdListenerCallback, ...rootIds: string[]) {
+    notify(id: string, event: ListenerEvent) {
+        if (!this.listeners.has(id)) return;
+        this.listeners.get(id)!.forEach((listener) => listener(id, event));
+    }
 
-        const rootId = this.makePath(...rootIds);
-        const container = this.getOrCreateRoot(rootId);
+    add(id: string): void {
+        this.notify(id, ListenerEvent.ADDED);
+    }
 
-        const idListeners = this.getOrCreateIdListeners(container, id);
+    modify(id: string): void {
+        this.notify(id, ListenerEvent.MODIFIED);
+    }
 
-        const unsubscribe = idListeners.addListener(listener);
+    delete(id: string): void {
+        this.notify(id, ListenerEvent.REMOVED);
+    }
 
-        if (container.ids.has(id)) {
-            listener(ListenerEvent.ADDED);
+    isEmpty(): boolean {
+        return this.listeners.size === 0;
+    }
+
+    isEmptyId(id: string): boolean {
+        return !this.listeners.has(id);
+    }
+}
+
+export class SubIdListeners {
+    listeners: Map<string, Map<string, Unsubscribers<SubIdListenerCallback>>> = new Map();
+
+    addListener(id: string, subId: string, listener: SubIdListenerCallback): UnsubscribeCallback {
+        if (!this.listeners.has(id)) {
+            this.listeners.set(id, new Map());
         }
+
+        const subListeners = this.listeners.get(id)!;
+
+        if (!subListeners.has(subId)) {
+            subListeners.set(subId, new Unsubscribers());
+        }
+
+        const listeners = subListeners.get(subId)!;
+
+        const unsubscribe = listeners.add(listener);
 
         return () => {
             unsubscribe();
-            if (idListeners.size() === 0) container.idListeners.delete(id);
-            this.removeRootIfPossible(container);
-        }
+            if (this.listeners.get(id)!.get(subId)!.isEmpty()) this.listeners.get(id)!.delete(id);
+            if (this.listeners.get(id)!.size === 0) this.listeners.delete(id);
+        };
     }
 
-    removeRootIfPossible(container: IdContainer){
-        if (container.listeners.size() === 0 && container.idListeners.size === 0 && container.ids.size === 0) {
-            this.root.delete(container. rootId);
-        }
+    notify(id: string, subId: string, event: ListenerEvent) {
+        if (!this.listeners.has(id)) return;
+        const subListeners = this.listeners.get(id)!;
+        if (!subListeners.has(subId)) return;
+        subListeners.get(subId)!.forEach((listener) => listener(id, subId, event));
     }
 
-
-    addId(id: string, ...rootIds: string[]) {
-        const rootId = this.makePath(...rootIds);
-        const container = this.getOrCreateRoot(rootId);
-
-        if (container.ids.has(id)) {
-            container.listeners.forEach(listener => listener(id, ListenerEvent.MODIFIED));
-            this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.MODIFIED, ...rootIds, id));
-        } else {
-            container.ids.add(id);
-            container.listeners.forEach(listener => listener(id, ListenerEvent.ADDED));
-            if (container.idListeners.has(id)) {
-                container.idListeners.get(id)!.forEach(listener => listener(ListenerEvent.ADDED));
-            }
-            this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.ADDED, ...rootIds, id));
-        }
-        
+    add(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.ADDED);
     }
 
-    removeId(id: string, ...rootIds: string[]) {
-        const rootId = this.makePath(...rootIds);
-        if (!this.root.has(rootId)) return;
-        const container = this.root.get(rootId)!;
-
-        if (!container.ids.has(id)) return;
-
-        container.ids.delete(id);
-
-        container.listeners.forEach(listener => listener(id, ListenerEvent.REMOVED));
-        if (container.idListeners.has(id)) {
-                container.idListeners.get(id)!.forEach(listener => listener(ListenerEvent.REMOVED));
-        }
-        this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.REMOVED, ...rootIds, id));
-
-        this.removeRootIfPossible(container);      
-        
-    }    
-
-    modifyId(id: string, ...rootIds: string[]) {
-        const rootId = this.makePath(...rootIds);
-        if (!this.root.has(rootId)) return;
-        const container = this.root.get(rootId)!;
-
-        if (!container.ids.has(id)) return;
-
-        container.listeners.forEach(listener => listener(id, ListenerEvent.MODIFIED));
-        if (container.idListeners.has(id)) {
-                container.idListeners.get(id)!.forEach(listener => listener(ListenerEvent.MODIFIED));
-        }
-        this.anyListeners.getCallbacks().forEach(listener => listener(ListenerEvent.MODIFIED, ...rootIds, id));
+    modify(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.MODIFIED);
     }
 
+    delete(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.REMOVED);
+    }
+
+    isEmpty(): boolean {
+        return this.listeners.size === 0;
+    }
+
+    isEmptyId(id: string): boolean {
+        return !this.listeners.has(id);
+    }
+
+    isEmptySubId(id: string, subId: string): boolean {
+        return !this.listeners.has(id) || !this.listeners.get(id)!.has(subId);
+    }
+}
+
+export class AnySubIdListeners {
+    listeners: Map<string, Unsubscribers<SubIdListenerCallback>> = new Map();
+
+    addListener(id: string, listener: SubIdListenerCallback): UnsubscribeCallback {
+        if (!this.listeners.has(id)) {
+            this.listeners.set(id, new Unsubscribers());
+        }
+
+        const listeners = this.listeners.get(id)!;
+
+        const unsubscribe = listeners.add(listener);
+
+        return () => {
+            unsubscribe();
+            if (this.listeners.get(id)!.isEmpty()) this.listeners.delete(id);
+        };
+    }
+
+    notify(id: string, subId: string, event: ListenerEvent) {
+        if (!this.listeners.has(id)) return;
+        this.listeners.get(id)!.forEach((listener) => listener(id, subId, event));
+    }
+
+    add(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.ADDED);
+    }
+
+    modify(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.MODIFIED);
+    }
+
+    delete(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.REMOVED);
+    }
+
+    isEmpty(): boolean {
+        return this.listeners.size === 0;
+    }
+
+    isEmptyId(id: string): boolean {
+        return !this.listeners.has(id);
+    }
+}
+
+export class AnyListeners {
+    listeners: Unsubscribers<SubIdListenerCallback> = new Unsubscribers();
+
+    addListener(listener: SubIdListenerCallback): UnsubscribeCallback {
+        const unsubscribe = this.listeners.add(listener);
+
+        return () => {
+            unsubscribe();
+        };
+    }
+
+    notify(id: string, subId: string, event: ListenerEvent) {
+        this.listeners.forEach((listener) => listener(id, subId, event));
+    }
+
+    add(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.ADDED);
+    }
+
+    modify(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.MODIFIED);
+    }
+
+    delete(id: string, subId: string): void {
+        this.notify(id, subId, ListenerEvent.REMOVED);
+    }
+
+    isEmpty(): boolean {
+        return this.listeners.isEmpty();
+    }
 }

@@ -6,52 +6,66 @@ export declare enum ListenerEvent {
     REMOVED = 1,
     MODIFIED = 2
 }
-export declare class Listeners<T> {
-    listenerCount: number;
-    callbacks: Map<number, T>;
-    createId(): number;
-    removeListener(id: number): void;
-    addListener(callback: T): UnsubscribeCallback;
-    getCallbacks(): Array<T>;
-    forEach(callbackfn: (value: T, key: number, map: Map<number, T>) => void): void;
-    size(): number;
-}
-export interface DataListenerCallback<T> {
-    (data: T): void;
-}
-export declare class DataListeners<T> extends Listeners<DataListenerCallback<T>> {
-}
-interface IdContainer {
-    rootId: string;
-    ids: Set<string>;
-    listeners: Listeners<(id: string, event: ListenerEvent) => void>;
-    idListeners: Map<string, Listeners<(event: ListenerEvent) => void>>;
-}
-export interface AnyIdListenerCallback {
+export interface IdListenerCallback {
     (id: string, event: ListenerEvent): void;
 }
-export interface AnyListenerCallback {
-    (event: ListenerEvent, ...ids: string[]): void;
-}
-export interface AnySubIdListenerCallback {
+export interface SubIdListenerCallback {
     (id: string, subId: string, event: ListenerEvent): void;
 }
-export interface IdListenerCallback {
-    (event: ListenerEvent): void;
+export declare class Unsubscribers<T> {
+    items: Map<number, T>;
+    cnt: number;
+    add(item: T): UnsubscribeCallback;
+    forEach(callback: (item: T) => void): void;
+    isEmpty(): boolean;
+}
+export declare class AnyIdListeners {
+    listeners: Unsubscribers<IdListenerCallback>;
+    cnt: number;
+    addListener(listener: IdListenerCallback): UnsubscribeCallback;
+    notify(id: string, event: ListenerEvent): void;
+    add(id: string): void;
+    modify(id: string): void;
+    delete(id: string): void;
+    isEmpty(): boolean;
 }
 export declare class IdListeners {
-    root: Map<string, IdContainer>;
-    anyListeners: Listeners<(event: ListenerEvent, ...ids: string[]) => void>;
-    constructor();
-    getOrCreateRoot(rootId: string): IdContainer;
-    getOrCreateIdListeners(container: IdContainer, id: string): Listeners<(event: ListenerEvent) => void>;
-    makePath(...rootIds: string[]): string;
-    addAnyListener(listener: AnyListenerCallback): UnsubscribeCallback;
-    addListener(listener: AnyIdListenerCallback, ...rootIds: string[]): () => void;
-    addIdListener(id: string, listener: IdListenerCallback, ...rootIds: string[]): () => void;
-    removeRootIfPossible(container: IdContainer): void;
-    addId(id: string, ...rootIds: string[]): void;
-    removeId(id: string, ...rootIds: string[]): void;
-    modifyId(id: string, ...rootIds: string[]): void;
+    listeners: Map<string, Unsubscribers<IdListenerCallback>>;
+    addListener(id: string, listener: IdListenerCallback): UnsubscribeCallback;
+    notify(id: string, event: ListenerEvent): void;
+    add(id: string): void;
+    modify(id: string): void;
+    delete(id: string): void;
+    isEmpty(): boolean;
+    isEmptyId(id: string): boolean;
 }
-export {};
+export declare class SubIdListeners {
+    listeners: Map<string, Map<string, Unsubscribers<SubIdListenerCallback>>>;
+    addListener(id: string, subId: string, listener: SubIdListenerCallback): UnsubscribeCallback;
+    notify(id: string, subId: string, event: ListenerEvent): void;
+    add(id: string, subId: string): void;
+    modify(id: string, subId: string): void;
+    delete(id: string, subId: string): void;
+    isEmpty(): boolean;
+    isEmptyId(id: string): boolean;
+    isEmptySubId(id: string, subId: string): boolean;
+}
+export declare class AnySubIdListeners {
+    listeners: Map<string, Unsubscribers<SubIdListenerCallback>>;
+    addListener(id: string, listener: SubIdListenerCallback): UnsubscribeCallback;
+    notify(id: string, subId: string, event: ListenerEvent): void;
+    add(id: string, subId: string): void;
+    modify(id: string, subId: string): void;
+    delete(id: string, subId: string): void;
+    isEmpty(): boolean;
+    isEmptyId(id: string): boolean;
+}
+export declare class AnyListeners {
+    listeners: Unsubscribers<SubIdListenerCallback>;
+    addListener(listener: SubIdListenerCallback): UnsubscribeCallback;
+    notify(id: string, subId: string, event: ListenerEvent): void;
+    add(id: string, subId: string): void;
+    modify(id: string, subId: string): void;
+    delete(id: string, subId: string): void;
+    isEmpty(): boolean;
+}
