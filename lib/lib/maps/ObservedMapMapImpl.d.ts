@@ -16,6 +16,7 @@ export declare class ObservedMapMapImpl<T> implements ObservedMapMap<T> {
     hasSub(id: string, subId: string): boolean;
     getSub(id: string, subId: string): T | undefined;
     getSubIds(id: string): Set<string>;
+    forEach(callback: (value: T, id: string, subId: string) => void): void;
     forEachSub(id: string, callback: (value: T, key: string) => void): void;
     awaitForEachSub(id: string, callback: (value: T, key: string) => Promise<void>): void;
     keys(): IterableIterator<string>;

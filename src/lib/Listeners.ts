@@ -78,7 +78,8 @@ export class IdListeners {
 
         return () => {
             unsubscribe();
-            if (this.listeners.get(id)!.isEmpty()) this.listeners.delete(id);
+            const map = this.listeners.get(id);
+            if (map && map.isEmpty()) this.listeners.delete(id);
         };
     }
 
@@ -128,8 +129,10 @@ export class SubIdListeners {
 
         return () => {
             unsubscribe();
-            if (this.listeners.get(id)!.get(subId)!.isEmpty()) this.listeners.get(id)!.delete(id);
-            if (this.listeners.get(id)!.size === 0) this.listeners.delete(id);
+            const map = this.listeners.get(id);
+            if (!map) return;
+            if (map.get(subId)!.isEmpty()) map.delete(id);
+            if (map.size === 0) this.listeners.delete(id);
         };
     }
 
@@ -179,7 +182,8 @@ export class AnySubIdListeners {
 
         return () => {
             unsubscribe();
-            if (this.listeners.get(id)!.isEmpty()) this.listeners.delete(id);
+            const map = this.listeners.get(id);
+            if (map && map.isEmpty()) this.listeners.delete(id);
         };
     }
 

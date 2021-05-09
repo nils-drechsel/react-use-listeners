@@ -51,4 +51,14 @@ describe("ObservedMap", () => {
         map.delete("test1");
         expect(test.get("test1")).to.equal(1);
     });
+
+    it("basic functionality", () => {
+        const map: ObservedMap<string> = new ObservedMapImpl();
+
+        map.set("test0", "text0");
+        expect(map.has("test0")).to.be.true;
+
+        map.delete("test0");
+        expect(map.has("test0")).to.be.false;
+    });
 });

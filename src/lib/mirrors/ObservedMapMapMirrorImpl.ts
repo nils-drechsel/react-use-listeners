@@ -56,6 +56,13 @@ export class ObservedMapMapMirrorImpl<CONTENT> implements ObservedMapMapMirror<C
         if (!this.observedIds.has(id) || !this.observedIds.get(id)?.has(subId)) return undefined;
         return this.map.getSub(id, subId);
     }
+
+    forEach(callback: (value: CONTENT, id: string, subId: string) => void) {
+        this.map.forEach((value, id, subId) => {
+            if (this.observedIds.has(id) && this.observedIds.get(id)!.has(subId)) callback(value, id, subId);
+        });
+    }
+
     forEachSub(id: string, callback: (value: CONTENT, key: string) => void): void {
         const values = this.getSubValues(id);
         values.forEach(callback);

@@ -14,6 +14,7 @@ export declare class ObservedMapMapMirrorImpl<CONTENT> implements ObservedMapMap
     private getSubValues;
     hasSub(id: string, subId: string): boolean;
     getSub(id: string, subId: string): CONTENT | undefined;
+    forEach(callback: (value: CONTENT, id: string, subId: string) => void): void;
     forEachSub(id: string, callback: (value: CONTENT, key: string) => void): void;
     awaitForEachSub(id: string, callback: (value: CONTENT, key: string) => Promise<void>): void;
     keys(): IterableIterator<string>;

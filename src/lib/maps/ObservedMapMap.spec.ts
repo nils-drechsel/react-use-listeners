@@ -85,4 +85,31 @@ describe("ObservedMapMap", () => {
         });
         expect(test).to.equal(5);
     });
+
+    it("basic functionality", () => {
+        const map: ObservedMapMapImpl<string> = new ObservedMapMapImpl();
+
+        map.setSub("test0", "sub0", "text0");
+        expect(map.has("test0")).to.be.true;
+        expect(map.hasSub("test0", "sub0")).to.be.true;
+
+        map.setSub("test0", "sub1", "text1");
+        expect(map.has("test0")).to.be.true;
+        expect(map.hasSub("test0", "sub1")).to.be.true;
+
+        map.deleteSub("test0", "sub0");
+        expect(map.has("test0")).to.be.true;
+        expect(map.hasSub("test0", "sub0")).to.be.false;
+
+        map.deleteSub("test0", "sub1");
+        expect(map.has("test0")).to.be.false;
+        expect(map.hasSub("test0", "sub0")).to.be.false;
+
+        map.setSub("test0", "sub0", "text0");
+        map.setSub("test0", "sub1", "text1");
+        map.delete("test0");
+        expect(map.has("test0")).to.be.false;
+        expect(map.hasSub("test0", "sub0")).to.be.false;
+        expect(map.hasSub("test0", "sub1")).to.be.false;
+    });
 });

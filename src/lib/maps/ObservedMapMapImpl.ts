@@ -71,6 +71,14 @@ export class ObservedMapMapImpl<T> implements ObservedMapMap<T> {
         return new Set(this.map.get(id)!.keys());
     }
 
+    forEach(callback: (value: T, id: string, subId: string) => void) {
+        this.map.forEach((map, id) => {
+            map.forEach((value, subId) => {
+                callback(value, id, subId);
+            });
+        });
+    }
+
     forEachSub(id: string, callback: (value: T, key: string) => void) {
         if (!this.has(id)) return;
         this.map.get(id)!.forEach((value: T, key: string) => callback(value, key));
@@ -168,13 +176,10 @@ export class ObservedMapMapImpl<T> implements ObservedMapMap<T> {
     }
 
     modifySub(id: string, subId: string, data?: Object) {
-        if (!this.has(id)) {
-        }
-
         const map = this.map.get(id)!;
 
-        if (!map.has(subId)) {
-            throw new Error("ObservedMapMap has no id: " + id + " while modifying: " + subId);
+        if (!map || !map.has(subId)) {
+            return;
         }
 
         if (data) {
